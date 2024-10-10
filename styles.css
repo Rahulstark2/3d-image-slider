@@ -170,6 +170,35 @@ footer {
     pointer-events: none;
 }
 
+.loader {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.9);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+.loader-content {
+    color: white;
+    text-align: center;
+}
+.progress {
+    width: 200px;
+    height: 4px;
+    background: #333;
+    margin-top: 10px;
+}
+.progress-bar {
+    height: 100%;
+    background: white;
+    width: 0%;
+    transition: width 0.3s ease;
+}
+
 
 @media screen and (max-width: 768px) {
     nav,

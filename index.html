@@ -27,6 +27,15 @@
             <p>Reframing Perspectives Since 2024</p>
         </footer>
 
+        <div class="loader">
+            <div class="loader-content">
+                <p>Loading Images...</p>
+                <div class="progress">
+                    <div class="progress-bar"></div>
+                </div>
+            </div>
+        </div>
+
         <div class="container">
             <div class="overlay"></div>
             <div class="slider"></div>
@@ -221,197 +230,264 @@
         </script>
 
         <script type="module">
-            import {slides} from "./data.js";
-            const lenis = new Lenis();
-            lenis.on("scroll", ScrollTrigger.update);
-            gsap.ticker.add((time) => {
-                lenis.raf(time * 1000);
-            });
+            import { slides } from "./data.js";
 
-            gsap.ticker.lagSmoothing(0);
+// Initialize Lenis for smooth scrolling
+const lenis = new Lenis();
+lenis.on("scroll", ScrollTrigger.update);
+gsap.ticker.add((time) => {
+    lenis.raf(time * 1000);
+});
+gsap.ticker.lagSmoothing(0);
 
-            const scene = new THREE.Scene();
-            const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
-            const renderer = new THREE.WebGLRenderer();
-            renderer.setSize(window.innerWidth, window.innerHeight);
-            document.body.appendChild(renderer.domElement);
+// Three.js setup
+const scene = new THREE.Scene();
+const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+const renderer = new THREE.WebGLRenderer();
+renderer.setSize(window.innerWidth, window.innerHeight);
+document.body.appendChild(renderer.domElement);
 
-            const geometry = new THREE.PlaneGeometry(2,2);
+// Create geometry
+const geometry = new THREE.PlaneGeometry(2, 2);
+
+// Texture loader setup
+const loader = new THREE.TextureLoader();
+const texture0 = loader.load('1.jpeg', function(texture) {
+    texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
+    texture.minFilter = THREE.LinearMipmapLinearFilter;
+    texture.magFilter = THREE.LinearFilter;
+    texture.generateMipmaps = true;
+    texture.flipY = true;
+});
+
+const texture1 = loader.load('2.jpeg', function(texture) {
+    texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
+    texture.minFilter = THREE.LinearMipmapLinearFilter;
+    texture.magFilter = THREE.LinearFilter;
+    texture.generateMipmaps = true;
+});
+
+// Shader uniforms
+const uniforms = {
+    iTime: { value: 0 },
+    iResolution: { value: new THREE.Vector2(window.innerWidth, window.innerHeight) },
+    iChannel0: { value: texture0 },
+    iChannel1: { value: texture1 },
+    scrollOffset: { value: 0 }
+};
+
+// Create shader material
+const material = new THREE.ShaderMaterial({
+    uniforms: uniforms,
+    vertexShader: document.getElementById("vertexShader").textContent,
+    fragmentShader: document.getElementById("fragmentShader").textContent,
+});
+
+// Create mesh and add to scene
+const mesh = new THREE.Mesh(geometry, material);
+scene.add(mesh);
+
+// Animation variables
+let baseTime = 0;
+const BASE_SPEED = 0.001;
+
+// Image preloader class
+class ImagePreloader {
+    constructor(totalImages) {
+        this.totalImages = totalImages;
+        this.loadedImages = 0;
+        this.images = new Map();
+        this.progressBar = document.querySelector('.progress-bar');
+        this.loader = document.querySelector('.loader');
+    }
+
+    async preloadImages() {
+        const imagePromises = [];
+
+        for(let i = 1; i <= this.totalImages; i++) {
+            imagePromises.push(this.loadImage(`./assets/img${i}.jpeg`, i));
+        }
+
+        try {
+            await Promise.all(imagePromises);
+            this.loader.style.display = 'none';
+            return this.images;
+        } catch (error) {
+            console.error('Error preloading images:', error);
+            this.loader.innerHTML = 'Error loading images. Please refresh the page.';
+        }
+    }
+
+    loadImage(src, index) {
+        return new Promise((resolve, reject) => {
+            const img = new Image();
             
-            
-            const loader = new THREE.TextureLoader();
-            const texture0 = loader.load('1.jpeg', function(texture) {
-                texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
-                texture.minFilter = THREE.MipmapFilter;
-                texture.magFilter = THREE.MipMapFilter;
-                texture.generateMipmaps = true;
-                texture.flipY = true;
-            });
-
-            const texture1 = loader.load('2.jpeg', function(texture) {
-            texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
-            texture.minFilter = THREE.MipmapFilter;
-            texture.magFilter = THREE.MipMapFilter;
-            texture.generateMipmaps = true;
-            });
-
-
-            const uniforms = {
-                iTime: { value: 0 },
-                iResolution: { value: new THREE.Vector2(window.innerWidth, window.innerHeight) },
-                iChannel0: { value: texture0 },
-                iChannel1: { value: texture1 },
-                scrollOffset: {value: 0}
+            img.onload = () => {
+                this.loadedImages++;
+                this.updateProgress();
+                this.images.set(index, img);
+                resolve(img);
             };
 
-            const material = new THREE.ShaderMaterial({
-                uniforms: uniforms,
-                vertexShader: document.getElementById("vertexShader").textContent,
-                fragmentShader: document.getElementById("fragmentShader").textContent,
-            });
+            img.onerror = () => {
+                reject(new Error(`Failed to load image: ${src}`));
+            };
 
-            const mesh = new THREE.Mesh(geometry, material);
-            scene.add(mesh);
+            img.src = src;
+        });
+    }
 
-            let baseTime = 0;
-            const BASE_SPEED = 0.001;
+    updateProgress() {
+        const progress = (this.loadedImages / this.totalImages) * 100;
+        this.progressBar.style.width = `${progress}%`;
+    }
+}
 
-            function animate() {
-                baseTime += BASE_SPEED;
-                uniforms.iTime.value = baseTime + uniforms.scrollOffset.value * 10;
-                
-                const currentSpeed = BASE_SPEED + (uniforms.scrollOffset.value * (12.0 - 3.0));
-                console.log(`Current speed: ${currentSpeed}`);
-                console.log(`Current time: ${uniforms.iTime.value}`);
-                
-                renderer.render(scene, camera);
-                requestAnimationFrame(animate);
-            }
+// Animation function
+function animate() {
+    baseTime += BASE_SPEED;
+    uniforms.iTime.value = baseTime + uniforms.scrollOffset.value * 10;
+    
+    const currentSpeed = BASE_SPEED + (uniforms.scrollOffset.value * (12.0 - 3.0));
+    
+    renderer.render(scene, camera);
+    requestAnimationFrame(animate);
+}
 
-            animate();
+// Initialize animation
+animate();
 
-            window.addEventListener("resize", () => {
-                const width = window.innerWidth;
-                const height = window.innerHeight;
-                renderer.setSize(width, height);
-                uniforms.iResolution.value.set(width, height);
-            });
+// Slider constants
+const totalSlides = 10;
+const zStep = 2500;
+const initialZ = -22500;
 
-            gsap.registerPlugin(ScrollTrigger);
+// Initialize the preloader
+const imagePreloader = new ImagePreloader(totalSlides);
 
-            const totalSlides = 10;
-            const zStep = 2500;
-            const initialZ = -22500;
+// Generate slides function
+async function generateSlides() {
+    const preloadedImages = await imagePreloader.preloadImages();
+    const slider = document.querySelector(".slider");
+    slider.innerHTML = "";
 
-            function generateSlides() {
-                const slider = document.querySelector(".slider");
-                slider.innerHTML="";
+    for(let i = 1; i <= totalSlides; i++) {
+        const slide = document.createElement("div");
+        slide.className = "slide";
+        slide.id = `slide-${i}`;
 
-                for(let i = 1; i<= totalSlides; i++) {
-                    const slide = document.createElement("div");
-                    slide.className="slide";
-                    slide.id=`slide-${i}`;
+        const slideImg = document.createElement("div");
+        slideImg.className = "slide-img";
 
-                    const slideImg = document.createElement("div");
-                    slideImg.className="slide-img";
+        // Use the preloaded image
+        const img = preloadedImages.get(i).cloneNode();
+        img.loading = "lazy";
 
-                    const img = document.createElement("img");
-                    img.src=`./assets/img${i}.jpeg`;
-                    img.alt="";
+        const slideCopy = document.createElement("div");
+        slideCopy.className = "slide-copy";
+        slideCopy.innerHTML = `
+            <p>${slides[i - 1].title}</p>
+            <p>${slides[i - 1].id}</p>
+        `;
 
-                    const slideCopy = document.createElement("div");
-                    slideCopy.className = "slide-copy";
-                    slideCopy.innerHTML = `<p>${slides[i - 1].title}</p><p>${
-                        slides[i - 1].id
-                        }</p>`;
+        slideImg.appendChild(img);
+        slide.appendChild(slideImg);
+        slide.appendChild(slideCopy);
+        slider.appendChild(slide);
 
-                    slideImg.appendChild(img);
-                    slide.appendChild(slideImg);
-                    slide.appendChild(slideCopy);
-                    slider.appendChild(slide);
+        const zPosition = initialZ + (i - 1) * zStep;
+        const xPosition = i % 2 === 0 ? "30%" : "70%";
+        const opacity = i === totalSlides ? 1 : 
+                       i === totalSlides - 1 ? 0 : 0;
 
-                    const zPosition = initialZ + (i - 1) * zStep;
-                    const xPosition = i % 2 === 0 ? "30%" : "70%";
-                    const opacity = i === totalSlides ? 1 : i === totalSlides - 1 ? 0 : 0;
+        gsap.set(slide, {
+            top: "50%",
+            left: xPosition,
+            xPercent: -50,
+            yPercent: -50,
+            z: zPosition,
+            opacity: opacity,
+        });
+    }
 
-                    gsap.set(slide, {
-                        top: "50%",
-                        left: xPosition,
-                        xPercent: -50,
-                        yPercent: -50,
-                        z: zPosition,
-                        opacity: opacity,
-                    });
+    initializeAnimations();
+}
+
+// Initialize animations
+function initializeAnimations() {
+    const slides = gsap.utils.toArray(".slide");
+
+    function getInitialTranslateZ(slide) {
+        return gsap.getProperty(slide, "z");
+    }
+
+    function mapRange(value, inMin, inMax, outMin, outMax) {
+        return ((value - inMin) * (outMax - outMin)) / (inMax - inMin) + outMin;
+    }
+
+    // Create container trigger
+    const containerTrigger = ScrollTrigger.create({
+        trigger: ".container",
+        start: "top top",
+        end: "bottom bottom",
+        scrub: 1,
+        onUpdate: (self) => {
+            uniforms.scrollOffset.value = self.progress;
+        },
+    });
+
+    // Reset scroll position
+    function resetScrollPosition() {
+        window.scrollTo(0, 0);
+        containerTrigger.scroll(0);
+        containerTrigger.refresh();
+    }
+
+    resetScrollPosition();
+
+    // Create animations for each slide
+    slides.forEach((slide, index) => {
+        const initialZ = getInitialTranslateZ(slide);
+
+        ScrollTrigger.create({
+            trigger: ".container",
+            start: "top top",
+            end: "bottom bottom",
+            scrub: 1,
+            onUpdate: (self) => {
+                const progress = self.progress;
+                const zIncrement = progress * 22500;
+                const currentZ = initialZ + zIncrement;
+
+                let opacity;
+                if (currentZ >= -2500) {
+                    opacity = mapRange(currentZ, -2500, 0, 0, 1);
+                } else {
+                    opacity = mapRange(currentZ, -5000, -2500, 0, 0);
                 }
-            }
 
-            window.addEventListener("load", function() {
-                generateSlides();
+                slide.style.opacity = opacity;
+                slide.style.transform = `translateX(-50%) translateY(-50%) translateZ(${currentZ}px)`;
+            },
+        });
+    });
+}
 
-                const slides = gsap.utils.toArray(".slide");
+// Event Listeners
+window.addEventListener("load", function() {
+    generateSlides();
+});
 
-                function getInitialTranslateZ(slide) {
-                    return gsap.getProperty(slide, "z");
-                }
+window.addEventListener("resize", () => {
+    const width = window.innerWidth;
+    const height = window.innerHeight;
+    renderer.setSize(width, height);
+    uniforms.iResolution.value.set(width, height);
+});
 
-                function mapRange(value, inMin, inMax, outMin, outMax) {
-                    return (
-                        ((value - inMin) * (outMax - outMin)) / (inMax - inMin) + outMin
-                    );
-                }
-
-                
-                const containerTrigger = ScrollTrigger.create({
-                    trigger: ".container",
-                    start: "top top",
-                    end: "bottom bottom",
-                    scrub: 1,
-                    onUpdate: (self) => {
-                        uniforms.scrollOffset.value = self.progress;
-                    },
-                });
-
-               
-                function resetScrollPosition() {
-                    window.scrollTo(0, 0);
-                    containerTrigger.scroll(0);
-                    containerTrigger.refresh();
-                }
-
-                
-                resetScrollPosition();
-
-                slides.forEach((slide, index) => {
-                    const initialZ = getInitialTranslateZ(slide);
-
-                    ScrollTrigger.create({
-                        trigger: ".container",
-                        start: "top top",
-                        end: "bottom bottom",
-                        scrub: 1,
-                        onUpdate: (self) => {
-                            const progress = self.progress;
-                            const zIncrement = progress * 22500;
-                            const currentZ = initialZ + zIncrement;
-
-                            let opacity;
-                            if (currentZ >= -2500) {
-                                opacity = mapRange(currentZ, -2500, 0, 0, 1);
-                            } else {
-                                opacity = mapRange(currentZ, -5000, -2500, 0, 0);
-                            }
-
-                            slide.style.opacity = opacity;
-                            slide.style.transform = `translateX(-50%) translateY(-50%) translateZ(${currentZ}px)`;
-                        },
-                    });
-                });
-            });
-
-            
-            window.addEventListener('beforeunload', function() {
-                window.scrollTo(0, 0);
-            });
+window.addEventListener('beforeunload', function() {
+    window.scrollTo(0, 0);
+});
         </script>
     </body>
 </html>
