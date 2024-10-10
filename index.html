@@ -29,7 +29,7 @@
 
         <div class="loader">
             <div class="loader-content">
-                <p>Loading Images...</p>
+                <p>Loading...</p>
                 <div class="progress">
                     <div class="progress-bar"></div>
                 </div>
@@ -232,7 +232,7 @@
         <script type="module">
             import { slides } from "./data.js";
 
-// Initialize Lenis for smooth scrolling
+
 const lenis = new Lenis();
 lenis.on("scroll", ScrollTrigger.update);
 gsap.ticker.add((time) => {
@@ -240,17 +240,17 @@ gsap.ticker.add((time) => {
 });
 gsap.ticker.lagSmoothing(0);
 
-// Three.js setup
+
 const scene = new THREE.Scene();
 const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
 const renderer = new THREE.WebGLRenderer();
 renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild(renderer.domElement);
 
-// Create geometry
+
 const geometry = new THREE.PlaneGeometry(2, 2);
 
-// Texture loader setup
+
 const loader = new THREE.TextureLoader();
 const texture0 = loader.load('1.jpeg', function(texture) {
     texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
@@ -267,7 +267,7 @@ const texture1 = loader.load('2.jpeg', function(texture) {
     texture.generateMipmaps = true;
 });
 
-// Shader uniforms
+
 const uniforms = {
     iTime: { value: 0 },
     iResolution: { value: new THREE.Vector2(window.innerWidth, window.innerHeight) },
@@ -276,22 +276,22 @@ const uniforms = {
     scrollOffset: { value: 0 }
 };
 
-// Create shader material
+
 const material = new THREE.ShaderMaterial({
     uniforms: uniforms,
     vertexShader: document.getElementById("vertexShader").textContent,
     fragmentShader: document.getElementById("fragmentShader").textContent,
 });
 
-// Create mesh and add to scene
+
 const mesh = new THREE.Mesh(geometry, material);
 scene.add(mesh);
 
-// Animation variables
+
 let baseTime = 0;
 const BASE_SPEED = 0.001;
 
-// Image preloader class
+
 class ImagePreloader {
     constructor(totalImages) {
         this.totalImages = totalImages;
@@ -343,7 +343,7 @@ class ImagePreloader {
     }
 }
 
-// Animation function
+
 function animate() {
     baseTime += BASE_SPEED;
     uniforms.iTime.value = baseTime + uniforms.scrollOffset.value * 10;
@@ -354,18 +354,18 @@ function animate() {
     requestAnimationFrame(animate);
 }
 
-// Initialize animation
+
 animate();
 
-// Slider constants
+
 const totalSlides = 10;
 const zStep = 2500;
 const initialZ = -22500;
 
-// Initialize the preloader
+
 const imagePreloader = new ImagePreloader(totalSlides);
 
-// Generate slides function
+
 async function generateSlides() {
     const preloadedImages = await imagePreloader.preloadImages();
     const slider = document.querySelector(".slider");
@@ -379,7 +379,7 @@ async function generateSlides() {
         const slideImg = document.createElement("div");
         slideImg.className = "slide-img";
 
-        // Use the preloaded image
+        
         const img = preloadedImages.get(i).cloneNode();
         img.loading = "lazy";
 
@@ -413,7 +413,7 @@ async function generateSlides() {
     initializeAnimations();
 }
 
-// Initialize animations
+
 function initializeAnimations() {
     const slides = gsap.utils.toArray(".slide");
 
@@ -425,7 +425,7 @@ function initializeAnimations() {
         return ((value - inMin) * (outMax - outMin)) / (inMax - inMin) + outMin;
     }
 
-    // Create container trigger
+    
     const containerTrigger = ScrollTrigger.create({
         trigger: ".container",
         start: "top top",
@@ -436,7 +436,7 @@ function initializeAnimations() {
         },
     });
 
-    // Reset scroll position
+   
     function resetScrollPosition() {
         window.scrollTo(0, 0);
         containerTrigger.scroll(0);
@@ -445,7 +445,7 @@ function initializeAnimations() {
 
     resetScrollPosition();
 
-    // Create animations for each slide
+   
     slides.forEach((slide, index) => {
         const initialZ = getInitialTranslateZ(slide);
 
@@ -473,7 +473,7 @@ function initializeAnimations() {
     });
 }
 
-// Event Listeners
+
 window.addEventListener("load", function() {
     generateSlides();
 });
